@@ -97,13 +97,13 @@ pre{white-space:pre-wrap;font-family:inherit}
   <button class="nav-btn" onclick="showPage('assets',this)">Assets</button>
   <button class="nav-btn" onclick="showPage('settings',this)">&#9881; Instellingen</button>
   <div class="nav-spacer"></div>
-  <span id="api-badge" class="api-badge api-missing" onclick="showPage('settings',document.querySelectorAll('.nav-btn')[4])">&#9888; API Key vereist</span>
+  <span id="api-badge" class="api-badge api-ok" onclick="showPage('settings',document.querySelectorAll('.nav-btn')[4])">Claude actief</span>
 </nav>
 
 <div id="page-generator" class="page active">
   <h1>&#10024; Ad Creative Generator</h1>
   <p class="sub">Claude genereert 4-5 unieke varianten &middot; Altijd 1080x1350 &middot; Meta Ads geoptimaliseerd</p>
-  <div id="no-api-banner" class="alert alert-red" style="display:none">Geen Anthropic API key. Ga naar <strong>Instellingen</strong> en voer je key in.</div>
+
   <div class="grid2">
     <div class="card">
       <h2>Concept Instellen</h2>
@@ -236,19 +236,19 @@ pre{white-space:pre-wrap;font-family:inherit}
 <div id="page-settings" class="page">
   <h1>&#9881; Instellingen</h1>
   <p class="sub">Voer je Anthropic API key in om Claude te activeren</p>
-  <div class="alert alert-orange">
-    <strong>Jouw actie vereist:</strong> Voer hieronder je Anthropic API key in.
-    Haal hem op via <a href="https://console.anthropic.com" target="_blank" style="color:var(--orange);font-weight:bold">console.anthropic.com</a>
-    &rarr; API Keys &rarr; Create Key (begint met sk-ant-api03-...)
+  <div class="alert alert-green">
+    &#9989; <strong>Claude is actief via Railway server.</strong>
+    De Anthropic API key staat veilig als omgevingsvariabele op de server.
+    Voeg toe via <strong>Railway &rarr; Variables &rarr; ANTHROPIC_API_KEY</strong>.
   </div>
   <div class="grid2">
     <div class="card">
-      <h2>&#128273; Anthropic API Key</h2>
-      <label>Claude API Key <span style="color:var(--red)">*</span></label>
-      <input id="api-key-input" type="password" placeholder="sk-ant-api03-..."/>
-      <p style="font-size:0.78em;color:var(--muted);margin-top:6px">Wordt veilig opgeslagen in je browser. Gaat nergens naartoe.</p>
-      <div class="gap"></div>
-      <button class="btn btn-primary" onclick="saveApiKey()">Opslaan &amp; Claude Activeren</button>
+      <h2>&#9989; Server Status</h2>
+      <p style="font-size:0.88em;color:var(--muted);line-height:1.8">
+        Claude draait als server-side proxy via <strong>/claude</strong>.<br>
+        De API key is nooit zichtbaar in de browser.<br><br>
+      </p>
+      <button class="btn btn-ghost btn-sm" onclick="testClaude()" style="margin-top:8px">Test Claude verbinding</button>
       <div id="api-status" style="margin-top:8px"></div>
     </div>
     <div class="card">
@@ -318,15 +318,9 @@ function showPage(n, b) {
 function checkKey() {
   var b = document.getElementById("api-badge");
   var bn = document.getElementById("no-api-banner");
-  if (S.apiKey && S.apiKey.startsWith("sk-ant")) {
-    b.className = "api-badge api-ok";
-    b.textContent = "Claude actief";
-    if (bn) bn.style.display = "none";
-  } else {
-    b.className = "api-badge api-missing";
-    b.textContent = "API Key vereist";
-    if (bn) bn.style.display = "block";
-  }
+  b.className = "api-badge api-ok";
+  b.textContent = "Claude actief";
+  if (bn) bn.style.display = "none";
 }
 
 function closeModal() {
@@ -339,10 +333,9 @@ function copyModal() {
 }
 
 async function claude(sys, usr, mt) {
-  if (!S.apiKey || !S.apiKey.startsWith("sk-ant")) throw new Error("Geen API key. Ga naar Instellingen.");
-  var r = await fetch("https://api.anthropic.com/v1/messages", {
+  var r = await fetch("/claude", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": S.apiKey, "anthropic-version": "2023-06-01" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: mt || 4096, messages: [{ role: "user", content: usr }], system: sys })
   });
   if (!r.ok) { var e = await r.json(); throw new Error((e.error && e.error.message) || "API fout " + r.status); }
@@ -559,6 +552,25 @@ function saveDefaults() {
   S.defaults = { socialProof: document.getElementById("default-social-proof").value, fomo: document.getElementById("default-fomo").value, ctas: document.getElementById("default-ctas").value, guarantee: document.getElementById("default-guarantee").value };
   localStorage.setItem("nmt_d", JSON.stringify(S.defaults));
   alert("Standaarden opgeslagen!");
+}
+
+async function testClaude() {
+  document.getElementById("api-status").innerHTML = "<div class=\"alert alert-orange\">Testen...</div>";
+  try {
+    var r = await fetch("/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 20, messages: [{ role: "user", content: "Zeg alleen: OK" }] })
+    });
+    var d = await r.json();
+    if (r.ok && d.content) {
+      document.getElementById("api-status").innerHTML = "<div class=\"alert alert-green\">&#9989; Claude werkt! Antwoord: " + d.content[0].text + "</div>";
+    } else {
+      document.getElementById("api-status").innerHTML = "<div class=\"alert alert-red\">Fout: " + (d.error || JSON.stringify(d)) + "</div>";
+    }
+  } catch(e) {
+    document.getElementById("api-status").innerHTML = "<div class=\"alert alert-red\">Verbindingsfout: " + e.message + "</div>";
+  }
 }
 
 function saveSystemPrompt() {
