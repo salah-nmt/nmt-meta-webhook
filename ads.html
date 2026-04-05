@@ -371,7 +371,8 @@ async function generateAds() {
   document.getElementById("variants-output").style.display = "none";
   try {
     var raw = await claude(sys, usr, 4096);
-    var m = raw.match(/[[sS]*]/);
+    raw = raw.replace(/^```[\w]*\s*/,"").replace(/\s*```$/,"");
+    var m = raw.match(/\[[\s\S]*\]/);
     if (!m) throw new Error("Geen geldige JSON ontvangen - probeer opnieuw");
     var vars = JSON.parse(m[0]);
     S.variants = vars;
@@ -466,7 +467,8 @@ async function runChecker() {
     "Score 0-100. Geef altijd een gecorrigeerde versie.";
   try {
     var raw = await claude(sys, "Analyseer deze " + svc + " ad: " + txt, 2048);
-    var m = raw.match(/{[sS]*}/);
+    raw = raw.replace(/^```[\w]*\s*/,"").replace(/\s*```$/,"");
+    var m = raw.match(/\{[\s\S]*\}/);
     if (!m) throw new Error("Ongeldig antwoord");
     var res = JSON.parse(m[0]);
     var se = document.getElementById("checker-score");
