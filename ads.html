@@ -103,7 +103,6 @@ pre{white-space:pre-wrap;font-family:inherit}
 <div id="page-generator" class="page active">
   <h1>&#10024; Ad Creative Generator</h1>
   <p class="sub">Claude genereert 4-5 unieke varianten &middot; Altijd 1080x1350 &middot; Meta Ads geoptimaliseerd</p>
-
   <div class="grid2">
     <div class="card">
       <h2>Concept Instellen</h2>
@@ -232,14 +231,11 @@ pre{white-space:pre-wrap;font-family:inherit}
   <h2>Opgeslagen Assets</h2>
   <div id="asset-grid" class="asset-grid"></div>
 </div>
-
 <div id="page-settings" class="page">
   <h1>&#9881; Instellingen</h1>
   <p class="sub">Voer je Anthropic API key in om Claude te activeren</p>
   <div class="alert alert-green">
-    &#9989; <strong>Claude is actief via Railway server.</strong>
-    De Anthropic API key staat veilig als omgevingsvariabele op de server.
-    Voeg toe via <strong>Railway &rarr; Variables &rarr; ANTHROPIC_API_KEY</strong>.
+    &#9989; <strong>Claude is actief via Railway server.</strong> De Anthropic API key staat veilig als omgevingsvariabele op de server. Voeg toe via <strong>Railway &rarr; Variables &rarr; ANTHROPIC_API_KEY</strong>.
   </div>
   <div class="grid2">
     <div class="card">
@@ -295,10 +291,8 @@ Stuur een bericht via WhatsApp</textarea>
     <div class="gap"></div>
     <button class="btn btn-ghost" onclick="saveSystemPrompt()">Opslaan</button>
   </div>
-</div>
-<script>
+</div><script>
 var S = {
-  apiKey: localStorage.getItem("nmt_k") || "",
   variants: [],
   vault: JSON.parse(localStorage.getItem("nmt_v") || "[]"),
   assets: JSON.parse(localStorage.getItem("nmt_a") || "[]"),
@@ -312,21 +306,9 @@ function showPage(n, b) {
   document.querySelectorAll(".nav-btn").forEach(function(x) { x.classList.remove("active"); });
   document.getElementById("page-" + n).classList.add("active");
   if (b) b.classList.add("active");
-  checkKey();
 }
 
-function checkKey() {
-  var b = document.getElementById("api-badge");
-  var bn = document.getElementById("no-api-banner");
-  b.className = "api-badge api-ok";
-  b.textContent = "Claude actief";
-  if (bn) bn.style.display = "none";
-}
-
-function closeModal() {
-  document.getElementById("nmt-modal").classList.remove("open");
-}
-
+function closeModal() { document.getElementById("nmt-modal").classList.remove("open"); }
 function copyModal() {
   navigator.clipboard.writeText(document.getElementById("modal-text").textContent);
   alert("Gekopieerd!");
@@ -336,9 +318,17 @@ async function claude(sys, usr, mt) {
   var r = await fetch("/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: mt || 4096, messages: [{ role: "user", content: usr }], system: sys })
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: mt || 4096,
+      messages: [{ role: "user", content: usr }],
+      system: sys
+    })
   });
-  if (!r.ok) { var e = await r.json(); throw new Error((e.error && e.error.message) || "API fout " + r.status); }
+  if (!r.ok) {
+    var e = await r.json().catch(function() { return {}; });
+    throw new Error((e.error && e.error.message) || "API fout " + r.status);
+  }
   var d = await r.json();
   return d.content[0].text;
 }
@@ -346,7 +336,8 @@ async function claude(sys, usr, mt) {
 function vaultCtx() {
   if (!S.vault.length) return "";
   return "WINNING ADS (leer hiervan): " + S.vault.slice(0, 3).map(function(v, i) {
-    return "Ad " + (i + 1) + " (" + v.service + ", resultaten: " + (v.results || "goed") + "): " + v.text.substring(0, 200) + " Werkte omdat: " + (v.why || "nvt");
+    return "Ad " + (i+1) + " (" + v.service + ", resultaten: " + (v.results || "goed") + "): " +
+      v.text.substring(0, 200) + " Werkte omdat: " + (v.why || "nvt");
   }).join(" | ");
 }
 
@@ -360,31 +351,36 @@ async function generateAds() {
   var sp = S.defaults.socialProof || "9/10 klanten bevelen ons aan op TrustLocal";
   var fm = S.defaults.fomo || "OP=OP - Nog beperkte plaatsen beschikbaar!";
   var gu = S.defaults.guarantee || "100% gratis offerte - Geen verplichtingen";
-  var sys = "Je bent expert Facebook/Instagram advertentietekst schrijver voor NMT Group, Belgisch renovatiebedrijf Antwerpen. "
-    + "SERVICE: " + svc + " | Regio: provincie Antwerpen | Taal: Vlaams Nederlands (u/uw) "
-    + "FORMAT: ALTIJD 1080x1350 pixels portrait "
-    + "VERPLICHT: Social proof: " + sp + " | FOMO: " + fm + " | Garantie: " + gu + " "
-    + "FORMULE: Hook -> Probleem->Oplossing->Bewijs -> Social proof -> FOMO -> CTA "
-    + "5 VARIANTEN: A=Prijs/Besparing B=Urgentie/FOMO C=Social Proof D=Pijn/Probleem E=Premie "
-    + (S.sysExtra ? "EXTRA: " + S.sysExtra + " " : "")
-    + vaultCtx()
-    + " OUTPUT: Geef EXACT een JSON array met 5 objecten: "
-    + "[{" + '"variant":"A","type":"Prijs/Besparing","headline":"...","subtext":"...","socialProof":"...","fomo":"...","cta":"...","guarantee":"...","fullText":"complete ad tekst"' + "}]";
-  var usr = "SERVICE: " + svc + " CONCEPT: " + con + " DOELGROEP: " + tgt + " USP: " + (usp || "Gratis offerte, snelle installatie") + " EXTRA: " + (ext || "geen") + " Geef ALLEEN de JSON array terug.";
+  var sys = "Je bent expert Facebook/Instagram advertentietekst schrijver voor NMT Group, Belgisch renovatiebedrijf Antwerpen. " +
+    "SERVICE: " + svc + " | Regio: provincie Antwerpen | Taal: Vlaams Nederlands (u/uw) " +
+    "FORMAT: ALTIJD 1080x1350 pixels portrait " +
+    "VERPLICHT: Social proof: " + sp + " | FOMO: " + fm + " | Garantie: " + gu + " " +
+    "FORMULE: Hook -> Probleem->Oplossing->Bewijs -> Social proof -> FOMO -> CTA " +
+    "5 VARIANTEN: A=Prijs/Besparing B=Urgentie/FOMO C=Social Proof D=Pijn/Probleem E=Premie " +
+    (S.sysExtra ? "EXTRA: " + S.sysExtra + " " : "") +
+    vaultCtx() +
+    ' OUTPUT: Geef EXACT een JSON array met 5 objecten: [{"variant":"A","type":"Prijs/Besparing","headline":"...","subtext":"...","socialProof":"...","fomo":"...","cta":"...","guarantee":"...","fullText":"complete ad tekst"}]';
+  var usr = "SERVICE: " + svc +
+    " CONCEPT: " + con +
+    " DOELGROEP: " + tgt +
+    " USP: " + (usp || "Gratis offerte, snelle installatie") +
+    " EXTRA: " + (ext || "geen") +
+    " Geef ALLEEN de JSON array terug.";
   document.getElementById("gen-btn").disabled = true;
   document.getElementById("gen-loading").style.display = "block";
   document.getElementById("variants-output").style.display = "none";
   try {
     var raw = await claude(sys, usr, 4096);
     var m = raw.match(/[[sS]*]/);
-    if (!m) throw new Error("Geen geldige JSON ontvangen");
+    if (!m) throw new Error("Geen geldige JSON ontvangen - probeer opnieuw");
     var vars = JSON.parse(m[0]);
     S.variants = vars;
     S.lastSvc = svc;
     renderVars(vars, svc);
     document.getElementById("variants-output").style.display = "block";
-  } catch(e) { alert("Fout: " + e.message); }
-  finally {
+  } catch(e) {
+    alert("Fout: " + e.message);
+  } finally {
     document.getElementById("gen-btn").disabled = false;
     document.getElementById("gen-loading").style.display = "none";
   }
@@ -394,22 +390,22 @@ function renderVars(vars, svc) {
   var c = { A: "#22c55e", B: "#f97316", C: "#3b82f6", D: "#a855f7", E: "#ec4899" };
   document.getElementById("variants-grid").innerHTML = vars.map(function(v, i) {
     var col = c[v.variant] || "#f97316";
-    return "<div class=\"ad-card\">"
-      + "<div class=\"ad-preview\">"
-      + "<div class=\"ad-badge\" style=\"background:" + col + "\">" + v.variant + "</div>"
-      + "<div><div class=\"ad-service-tag\">" + svc + "</div>"
-      + "<div class=\"ad-headline\">" + (v.headline || "") + "</div>"
-      + "<div class=\"ad-subtext\">" + (v.subtext || "").substring(0, 100) + "...</div>"
-      + "<div class=\"ad-social-proof\">" + (v.socialProof || "").substring(0, 60) + "</div>"
-      + "<div class=\"ad-fomo\">" + (v.fomo || "").substring(0, 55) + "</div>"
-      + "<div class=\"ad-cta-preview\">" + (v.cta || "Gratis offerte") + "</div>"
-      + "<div class=\"ad-footer\">1080x1350 - NMT Group</div></div></div>"
-      + "<div class=\"ad-meta\"><div class=\"ad-variant-label\">" + (v.type || "Variant " + v.variant) + "</div>"
-      + "<div class=\"ad-actions\">"
-      + "<button class=\"btn btn-ghost btn-sm\" data-i=\"" + i + "\" onclick=\"copyV(this.dataset.i)\">Kopieer</button>"
-      + "<button class=\"btn btn-ghost btn-sm\" data-i=\"" + i + "\" onclick=\"checkV(this.dataset.i)\">Check</button>"
-      + "<button class=\"btn btn-ghost btn-sm\" data-i=\"" + i + "\" onclick=\"expandV(this.dataset.i)\">Volledig</button>"
-      + "</div></div></div>";
+    return "<div class=\"ad-card\">" +
+      "<div class=\"ad-preview\">" +
+      "<div class=\"ad-badge\" style=\"background:" + col + "\">" + v.variant + "</div>" +
+      "<div><div class=\"ad-service-tag\">" + svc + "</div>" +
+      "<div class=\"ad-headline\">" + (v.headline || "") + "</div>" +
+      "<div class=\"ad-subtext\">" + (v.subtext || "").substring(0, 100) + "...</div>" +
+      "<div class=\"ad-social-proof\">" + (v.socialProof || "").substring(0, 60) + "</div>" +
+      "<div class=\"ad-fomo\">" + (v.fomo || "").substring(0, 55) + "</div>" +
+      "<div class=\"ad-cta-preview\">" + (v.cta || "Gratis offerte") + "</div>" +
+      "<div class=\"ad-footer\">1080x1350 - NMT Group</div></div></div>" +
+      "<div class=\"ad-meta\"><div class=\"ad-variant-label\">" + (v.type || "Variant " + v.variant) + "</div>" +
+      "<div class=\"ad-actions\">" +
+      "<button class=\"btn btn-ghost btn-sm\" data-i=\"" + i + "\" onclick=\"copyV(this.dataset.i)\">Kopieer</button>" +
+      "<button class=\"btn btn-ghost btn-sm\" data-i=\"" + i + "\" onclick=\"checkV(this.dataset.i)\">Check</button>" +
+      "<button class=\"btn btn-ghost btn-sm\" data-i=\"" + i + "\" onclick=\"expandV(this.dataset.i)\">Volledig</button>" +
+      "</div></div></div>";
   }).join("");
 }
 
@@ -443,7 +439,16 @@ function copyAllVariants() {
 function saveToVault() {
   if (!S.variants.length) return;
   var v = S.variants[0];
-  S.vault.unshift({ id: Date.now(), name: S.lastSvc + " - Auto " + new Date().toLocaleDateString("nl-BE"), service: S.lastSvc, text: v.fullText || v.headline + "\n" + v.subtext, results: "", why: "Auto-opgeslagen vanuit generator", tags: ["auto", S.lastSvc.toLowerCase()], date: new Date().toISOString() });
+  S.vault.unshift({
+    id: Date.now(),
+    name: S.lastSvc + " - Auto " + new Date().toLocaleDateString("nl-BE"),
+    service: S.lastSvc,
+    text: v.fullText || v.headline + "\n" + v.subtext,
+    results: "",
+    why: "Auto-opgeslagen vanuit generator",
+    tags: ["auto", S.lastSvc.toLowerCase()],
+    date: new Date().toISOString()
+  });
   localStorage.setItem("nmt_v", JSON.stringify(S.vault));
   renderVault();
   alert("Opgeslagen in Vault!");
@@ -455,10 +460,10 @@ async function runChecker() {
   if (!txt) { alert("Voer ad tekst in!"); return; }
   document.getElementById("checker-results").style.display = "none";
   document.getElementById("checker-loading").style.display = "block";
-  var sys = "Je bent kwaliteitscontroleur voor Vlaamse Facebook/Instagram advertenties voor NMT Group. "
-    + "Analyseer op: spelfouten (Vlaams NL), zwakke CTA, ontbrekende social proof, ontbrekende FOMO. "
-    + 'Geef EXACT dit JSON: {"score":85,"issues":[{"type":"error","icon":"X","text":"beschrijving","fix":"hoe te fixen"}],"fixedVersion":"volledig gecorrigeerde ad tekst"} '
-    + "Score 0-100. Geef altijd een gecorrigeerde versie.";
+  var sys = "Je bent kwaliteitscontroleur voor Vlaamse Facebook/Instagram advertenties voor NMT Group. " +
+    "Analyseer op: spelfouten (Vlaams NL), zwakke CTA, ontbrekende social proof, ontbrekende FOMO. " +
+    'Geef EXACT dit JSON: {"score":85,"issues":[{"type":"error","icon":"X","text":"beschrijving","fix":"hoe te fixen"}],"fixedVersion":"volledig gecorrigeerde ad tekst"} ' +
+    "Score 0-100. Geef altijd een gecorrigeerde versie.";
   try {
     var raw = await claude(sys, "Analyseer deze " + svc + " ad: " + txt, 2048);
     var m = raw.match(/{[sS]*}/);
@@ -468,13 +473,17 @@ async function runChecker() {
     se.textContent = res.score + "/100";
     se.className = "quality-score " + (res.score >= 80 ? "score-ok" : res.score >= 60 ? "score-warn" : "score-bad");
     document.getElementById("checker-issues").innerHTML = (res.issues || []).map(function(x) {
-      return "<div class=\"issue-item\"><div>" + x.icon + "</div><div><div class=\"issue-text\">" + x.text + "</div>" + (x.fix ? "<div class=\"issue-fix\">Fix: " + x.fix + "</div>" : "") + "</div></div>";
+      return "<div class=\"issue-item\"><div>" + x.icon + "</div><div><div class=\"issue-text\">" + x.text + "</div>" +
+        (x.fix ? "<div class=\"issue-fix\">Fix: " + x.fix + "</div>" : "") + "</div></div>";
     }).join("") || "<div style=\"color:var(--green);padding:8px\">Geen problemen gevonden!</div>";
     document.getElementById("checker-fixed").textContent = res.fixedVersion || txt;
     window._fx = res.fixedVersion;
     document.getElementById("checker-results").style.display = "block";
-  } catch(e) { alert("Fout: " + e.message); }
-  finally { document.getElementById("checker-loading").style.display = "none"; }
+  } catch(e) {
+    alert("Fout: " + e.message);
+  } finally {
+    document.getElementById("checker-loading").style.display = "none";
+  }
 }
 
 function copyFixed() {
@@ -488,7 +497,16 @@ function toggleVaultForm() {
 }
 
 function saveVaultItem() {
-  S.vault.unshift({ id: Date.now(), name: document.getElementById("vault-name").value || "Winning Ad", service: document.getElementById("vault-service").value, results: document.getElementById("vault-results").value, why: document.getElementById("vault-why").value, text: document.getElementById("vault-text").value, tags: document.getElementById("vault-tags").value.split(",").map(function(t) { return t.trim(); }).filter(Boolean), date: new Date().toISOString() });
+  S.vault.unshift({
+    id: Date.now(),
+    name: document.getElementById("vault-name").value || "Winning Ad",
+    service: document.getElementById("vault-service").value,
+    results: document.getElementById("vault-results").value,
+    why: document.getElementById("vault-why").value,
+    text: document.getElementById("vault-text").value,
+    tags: document.getElementById("vault-tags").value.split(",").map(function(t) { return t.trim(); }).filter(Boolean),
+    date: new Date().toISOString()
+  });
   localStorage.setItem("nmt_v", JSON.stringify(S.vault));
   renderVault();
   toggleVaultForm();
@@ -498,25 +516,38 @@ function saveVaultItem() {
 function renderVault() {
   var l = document.getElementById("vault-list");
   if (!l) return;
-  if (!S.vault.length) { l.innerHTML = "<div style=\"color:var(--muted);text-align:center;padding:30px\">Nog geen winning ads. Voeg je best presterende ads toe!</div>"; return; }
+  if (!S.vault.length) {
+    l.innerHTML = "<div style=\"color:var(--muted);text-align:center;padding:30px\">Nog geen winning ads. Voeg je best presterende ads toe!</div>";
+    return;
+  }
   l.innerHTML = S.vault.map(function(v, i) {
-    return "<div class=\"vault-item\"><div class=\"flex\"><div><strong>" + v.name + "</strong><span style=\"margin-left:8px;font-size:0.72em;color:var(--muted)\">" + v.service + " - " + new Date(v.date).toLocaleDateString("nl-BE") + "</span></div>"
-      + "<div class=\"flex ml-auto\">"
-      + "<button class=\"btn btn-danger btn-sm\" data-i=\"" + i + "\" onclick=\"delVault(this.dataset.i)\">X</button>"
-      + "</div></div>"
-      + (v.results ? "<div style=\"margin-top:5px;font-size:0.8em;color:var(--green)\">" + v.results + "</div>" : "")
-      + (v.why ? "<div style=\"margin-top:3px;font-size:0.8em;color:var(--muted)\">" + v.why + "</div>" : "")
-      + "<div class=\"vault-tags\">" + (v.tags || []).map(function(t) { return "<span class=\"tag\">" + t + "</span>"; }).join("") + "</div>"
-      + "</div>";
+    return "<div class=\"vault-item\"><div class=\"flex\"><div><strong>" + v.name + "</strong><span style=\"margin-left:8px;font-size:0.72em;color:var(--muted)\">" +
+      v.service + " - " + new Date(v.date).toLocaleDateString("nl-BE") + "</span></div>" +
+      "<div class=\"flex ml-auto\"><button class=\"btn btn-danger btn-sm\" data-i=\"" + i + "\" onclick=\"delVault(this.dataset.i)\">X</button></div></div>" +
+      (v.results ? "<div style=\"margin-top:5px;font-size:0.8em;color:var(--green)\">" + v.results + "</div>" : "") +
+      (v.why ? "<div style=\"margin-top:3px;font-size:0.8em;color:var(--muted)\">" + v.why + "</div>" : "") +
+      "<div class=\"vault-tags\">" + (v.tags || []).map(function(t) { return "<span class=\"tag\">" + t + "</span>"; }).join("") + "</div>" +
+      "</div>";
   }).join("");
 }
 
 function delVault(i) {
-  if (confirm("Verwijderen?")) { S.vault.splice(parseInt(i), 1); localStorage.setItem("nmt_v", JSON.stringify(S.vault)); renderVault(); }
+  if (confirm("Verwijderen?")) {
+    S.vault.splice(parseInt(i), 1);
+    localStorage.setItem("nmt_v", JSON.stringify(S.vault));
+    renderVault();
+  }
 }
 
 function saveAsset() {
-  S.assets.unshift({ id: Date.now(), name: document.getElementById("asset-name").value || "Asset", type: document.getElementById("asset-type").value, url: document.getElementById("asset-url").value, notes: document.getElementById("asset-notes").value, date: new Date().toISOString() });
+  S.assets.unshift({
+    id: Date.now(),
+    name: document.getElementById("asset-name").value || "Asset",
+    type: document.getElementById("asset-type").value,
+    url: document.getElementById("asset-url").value,
+    notes: document.getElementById("asset-notes").value,
+    date: new Date().toISOString()
+  });
   localStorage.setItem("nmt_a", JSON.stringify(S.assets));
   renderAssets();
   ["asset-name","asset-url","asset-notes"].forEach(function(id) { document.getElementById(id).value = ""; });
@@ -525,31 +556,32 @@ function saveAsset() {
 function renderAssets() {
   var g = document.getElementById("asset-grid");
   if (!g) return;
-  if (!S.assets.length) { g.innerHTML = "<div style=\"color:var(--muted);padding:16px;grid-column:1/-1\">Nog geen assets opgeslagen.</div>"; return; }
+  if (!S.assets.length) {
+    g.innerHTML = "<div style=\"color:var(--muted);padding:16px;grid-column:1/-1\">Nog geen assets opgeslagen.</div>";
+    return;
+  }
   g.innerHTML = S.assets.map(function(a, i) {
-    return "<div class=\"asset-item\"><div class=\"asset-thumb\">" + a.type.charAt(0).toUpperCase() + "</div><div class=\"asset-name\">" + a.name + "</div>"
-      + "<div class=\"asset-type\">" + a.type + " <span data-i=\"" + i + "\" onclick=\"delAsset(this.dataset.i)\" style=\"color:var(--red);cursor:pointer\">X</span></div></div>";
+    return "<div class=\"asset-item\"><div class=\"asset-thumb\">" + a.type.charAt(0).toUpperCase() + "</div>" +
+      "<div class=\"asset-name\">" + a.name + "</div>" +
+      "<div class=\"asset-type\">" + a.type + " <span data-i=\"" + i + "\" onclick=\"delAsset(this.dataset.i)\" style=\"color:var(--red);cursor:pointer\">X</span></div></div>";
   }).join("");
 }
 
 function delAsset(i) {
-  if (confirm("Verwijderen?")) { S.assets.splice(parseInt(i), 1); localStorage.setItem("nmt_a", JSON.stringify(S.assets)); renderAssets(); }
-}
-
-function saveApiKey() {
-  var k = document.getElementById("api-key-input").value.trim();
-  if (!k.startsWith("sk-ant")) {
-    document.getElementById("api-status").innerHTML = "<div class=\"alert alert-red\">Ongeldige key. Moet beginnen met sk-ant...</div>";
-    return;
+  if (confirm("Verwijderen?")) {
+    S.assets.splice(parseInt(i), 1);
+    localStorage.setItem("nmt_a", JSON.stringify(S.assets));
+    renderAssets();
   }
-  S.apiKey = k;
-  localStorage.setItem("nmt_k", k);
-  document.getElementById("api-status").innerHTML = "<div class=\"alert alert-green\">Claude Sonnet geactiveerd! Je kunt nu ads genereren.</div>";
-  checkKey();
 }
 
 function saveDefaults() {
-  S.defaults = { socialProof: document.getElementById("default-social-proof").value, fomo: document.getElementById("default-fomo").value, ctas: document.getElementById("default-ctas").value, guarantee: document.getElementById("default-guarantee").value };
+  S.defaults = {
+    socialProof: document.getElementById("default-social-proof").value,
+    fomo: document.getElementById("default-fomo").value,
+    ctas: document.getElementById("default-ctas").value,
+    guarantee: document.getElementById("default-guarantee").value
+  };
   localStorage.setItem("nmt_d", JSON.stringify(S.defaults));
   alert("Standaarden opgeslagen!");
 }
@@ -566,7 +598,7 @@ async function testClaude() {
     if (r.ok && d.content) {
       document.getElementById("api-status").innerHTML = "<div class=\"alert alert-green\">&#9989; Claude werkt! Antwoord: " + d.content[0].text + "</div>";
     } else {
-      document.getElementById("api-status").innerHTML = "<div class=\"alert alert-red\">Fout: " + (d.error || JSON.stringify(d)) + "</div>";
+      document.getElementById("api-status").innerHTML = "<div class=\"alert alert-red\">Fout: " + JSON.stringify(d.error || d) + "</div>";
     }
   } catch(e) {
     document.getElementById("api-status").innerHTML = "<div class=\"alert alert-red\">Verbindingsfout: " + e.message + "</div>";
@@ -580,7 +612,6 @@ function saveSystemPrompt() {
 }
 
 (function init() {
-  checkKey();
   renderVault();
   renderAssets();
   var d = S.defaults;
@@ -590,7 +621,6 @@ function saveSystemPrompt() {
   if (d.guarantee) document.getElementById("default-guarantee").value = d.guarantee;
   var se = localStorage.getItem("nmt_se");
   if (se) document.getElementById("system-prompt-extra").value = se;
-  if (S.apiKey) document.getElementById("api-key-input").value = S.apiKey;
 })();
 </script>
 </body>
