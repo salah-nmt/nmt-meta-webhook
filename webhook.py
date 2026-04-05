@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 
 OPENAI_KEY = os.environ["OPENAI_API_KEY"]
 VERIFY_TOK = os.environ["META_VERIFY_TOKEN"]
+ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 PORT = int(os.environ.get("PORT", 5000))
 
 LEADS = []
@@ -87,6 +88,29 @@ def ontvangen():
     return jsonify({"status": "ok", "tier": tier}), 200
 
 
+@app.route("/claude", methods=["POST"])
+def claude_proxy():
+    """Proxy voor Anthropic API - vermijdt CORS in browser."""
+    if not ANTHROPIC_KEY:
+        return jsonify({"error": "ANTHROPIC_API_KEY niet ingesteld op server"}), 500
+    body = request.get_json(silent=True) or {}
+    try:
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": ANTHROPIC_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json=body,
+            timeout=60,
+        )
+        return jsonify(r.json()), r.status_code
+    except Exception as e:
+        log.error("Anthropic proxy: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/dashboard")
 def dashboard():
     hot = sum(1 for l in LEADS if l["tier"] == "HOT")
@@ -121,7 +145,7 @@ def ads_engine():
 
 @app.route("/health")
 def health():
-    return jsonify({"ok": True, "leads": len(LEADS)}), 200
+    return jsonify({"ok": True, "leads": len(LEADS), "claude": bool(ANTHROPIC_KEY)}), 200
 
 
 if __name__ == "__main__":
